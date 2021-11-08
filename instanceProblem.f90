@@ -3,7 +3,7 @@ use randomNum
 use inputData
 use kinds
 implicit none
-integer, parameter :: nParam = 23
+integer, parameter :: nParam = 24
 integer            :: nOs = 5
 contains
 
@@ -19,7 +19,7 @@ real(dp), intent (OUT) :: uncertainty
 
 real(dp)                      :: omegaPe, f0, gammaOE, beta, eta,epshf, omegaPe2,OPh2, gammaE, gammaH 
 real(dp)                      :: omega, omega2, gammaE2, gammaH2, deps1, deps2
-real(dp)                      :: dummy1, dummy2, dummy3, dummy4
+real(dp)                      :: dummy1, dummy2, dummy3, dummy4, xi
 real(dp), dimension(nSamples) :: drude1, drude2, lorentz1, lorentz2, epsilon1, epsilonTotal, epsilon2
 real(dp), dimension(nSamples) :: difEpsUno, difEpsDos, array1, array2
 integer                       :: i, k,j, kk, nDrudeParameters, casoFuncionCosto,versionCostFunction
@@ -28,7 +28,7 @@ complex*16                    :: II, eps
 deps1 = 0.01_dp
 deps2 = 0.01_dp
 
-nDrudeParameters = 7
+nDrudeParameters = 8
 omegaPe = x(1)
 f0 = x(2)
 gammaOE = x(3)
@@ -37,6 +37,7 @@ eta = x(5)
 epshf = 1/f0
 omegaPe2 = omegaPe*omegaPe
 OPh2 = omegaPe2*beta
+xi = x(8)
 
 dummy1 = x(6) 
 dummy2 = x(7)
