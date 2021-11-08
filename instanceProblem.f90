@@ -7,7 +7,7 @@ integer, parameter :: nParam = 23
 integer            :: nOs = 5
 contains
 
-subroutine fn(epsilonSumaTotal, uncertainty, x, energy, epsUnoE, epsDosE, flag)
+subroutine fn(epsilonSumaTotal, uncertainty, x, energy, epsUnoE, epsDosE, flag,versionCostFunction)
 implicit none
 real(dp), intent (IN)  :: x(:)
 real(dp), intent (IN)  :: energy(:)
@@ -22,7 +22,7 @@ real(dp)                      :: omega, omega2, gammaE2, gammaH2, deps1, deps2
 real(dp)                      :: dummy1, dummy2, dummy3, dummy4
 real(dp), dimension(nSamples) :: drude1, drude2, lorentz1, lorentz2, epsilon1, epsilonTotal, epsilon2
 real(dp), dimension(nSamples) :: difEpsUno, difEpsDos, array1, array2
-integer                       :: i, k,j, kk, nDrudeParameters, casoFuncionCosto, versionCostFunction
+integer                       :: i, k,j, kk, nDrudeParameters, casoFuncionCosto,versionCostFunction
 complex*16                    :: II, eps
 
 deps1 = 0.01_dp
@@ -38,11 +38,11 @@ epshf = 1/f0
 omegaPe2 = omegaPe*omegaPe
 OPh2 = omegaPe2*beta
 
-dummy1 = 1/x(6) 
-dummy2 = 1/x(7)
+dummy1 = x(6) 
+dummy2 = x(7)
 dummy3 = 1/x(nParam)
 
-versionCostFunction = 1
+
 select case(versionCostFunction)
 
     case(1)

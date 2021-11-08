@@ -6,7 +6,7 @@ implicit none
 
 
 integer, parameter :: maxTempCycles = 500
-integer, parameter :: N = 100000
+integer, parameter :: N = 200000
 integer, parameter :: nMov = 30
 real(dp)           :: tolTemp = 1.0e-4_dp
 real(dp)           :: initialAcceptance = 0.90_dp
@@ -16,7 +16,8 @@ real(dp)           :: alfa
 
 contains
 
-subroutine startOptimization(neighborhoodFactor, Nmax, deltaFactor, runTime, bestCostFn)
+subroutine startOptimization(neighborhoodFactor, Nmax, deltaFactor, runTime, bestCostFn, versionCostFunction, printScreen,&
+& markovLengthDynamic)
 implicit none
 integer,  intent (IN)              :: Nmax
 real(dp), intent (IN)              :: neighborhoodFactor
@@ -32,7 +33,8 @@ real(dp)                           :: T, deltaE, E,  promEAcept, prev_Temp
 real(dp)                           :: xn, EOld, probAcep, sigma, desviacion
 real(dp)                           :: start, finale, EMem, T_APCSA, deltaFnProm, uncertainty
 real(dp)                           :: tolEqTer, EMin, Tini
-integer                            :: m, i, nMov_Accepted, nMov_Rejected, flagTole
+integer                            :: m, i, nMov_Accepted, nMov_Rejected, flagTole, versionCostFunction,printScreen
+integer                            :: markovLengthDynamic
 logical                            :: isMovAccepted, flag, solidification
 
 call cpu_time(start)
@@ -59,12 +61,12 @@ do i=1,nParam
 end do
 
 
-call get_Init_Temp(Tini, L, U, energy, epsUnoE, epsDosE)
+call get_Init_Temp(Tini, L, U, energy, epsUnoE, epsDosE,versionCostFunction)
 T = Tini
 T_APCSA = Tini
 
 
-call fn(EOld, uncertainty,  xold, energy, epsUnoE, epsDosE,0)
+call fn(EOld, uncertainty,  xold, energy, epsUnoE, epsDosE,0,versionCostFunction)
 
 EMem = EOld
 xMem = xOld
@@ -92,7 +94,7 @@ do while ((m.le.maxTempCycles).and.solidification)
     do while (flag.and.(i.le.Nmax))
                 
         call makeTransition(xOld, x, L, U, stepP, freqCam)
-        call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0)
+        call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0,versionCostFunction)
         deltaE = E-EOld
 
         if (deltaE.lt.0.0_dp) then
@@ -126,7 +128,7 @@ do while ((m.le.maxTempCycles).and.solidification)
                         
         end if
 
-        if (isMovAccepted) then
+        if (isMovAccepted.and.(markovLengthDynamic.eq.1)) then
             call evaluate_equilibriumCondition(nMov_Accepted, beta, tolEqTer, flag)
         end if         
         
@@ -154,7 +156,7 @@ do while ((m.le.maxTempCycles).and.solidification)
             
         T = alfa*T    
         call evaluate_solidification_condition(m, EminArray, solidification)
-    call fn(EOld, uncertainty, xOld, energy, epsUnoE, epsDosE, 1)
+    call fn(EOld, uncertainty, xOld, energy, epsUnoE, epsDosE, 1,versionCostFunction)
     
     if (m.ge.2) then
         deltaFnProm = abs(fnAverage(m-1)-fnAverage(m)) 
@@ -169,8 +171,11 @@ do while ((m.le.maxTempCycles).and.solidification)
                 
         end if
     end if
+    
+    if (printScreen.eq.1) then
         
-    write(*,*) m, Emin, T_APCSA,  deltaFnProm, uncertainty, i
+    	write(*,*) m, Emin, T_APCSA,  deltaFnProm, uncertainty, i
+    end if
     !write(*,*) Emin, acceptanceRateTemp(m)
     
     m = m+1
@@ -214,11 +219,17 @@ U(4) = 1.0_dp
 L(5) = 0.5_dp
 U(5) = 1.5_dp
 
-L(6) = 0.5_dp
-U(6) = 2.5_dp
+!L(6) = 0.5_dp
+!U(6) = 2.5_dp
 
-L(7) = 2.0_dp
-U(7) = 3.0_dp
+!L(7) = 2.0_dp
+!U(7) = 3.0_dp
+
+L(6) = 0.0_dp
+U(6) = 1.0_dp
+
+L(7) = 0.0_dp
+U(7) = 1.0_dp
 
 L(8) = 0.0_dp
 U(8) = 5.0_dp
@@ -324,7 +335,7 @@ do while (flag)
         
     do i=1, nParam
         
-        call randNum(xn)
+        xn = 0.01_dp
 
         if (xn.le.freqCam(i)) then
         
@@ -428,7 +439,7 @@ implicit none
 real(dp), dimension(nParam) :: xOld, freqCam, L, U, stepP, x, z, deltaEk
 real(dp), dimension(nSamples) :: energy, epsUnoE, epsDosE
 real(dp) :: yavg, dyavg, E, dekMax, xn, rn, dif, sumaFreq, uncertainty
-integer :: i, j
+integer :: i, j, versionCostFunction
 
 dekMax = 0.0_dp
 z = 0.0_dp
@@ -454,7 +465,7 @@ do i = 1,nParam
         end if
 
         
-        call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0)
+        call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0,versionCostFunction)
         !write(*,*) E
         z(j) = E 
         
@@ -490,7 +501,7 @@ end do
 end subroutine
 
 
-subroutine get_Init_Temp(Tini, L, U, energy, epsUnoE, epsDosE)
+subroutine get_Init_Temp(Tini, L, U, energy, epsUnoE, epsDosE,versionCostFunction)
 use randomNum
 implicit none
 real(dp), intent (IN)  :: L(:)
@@ -503,7 +514,7 @@ real(dp), intent (OUT) :: Tini
 real(dp), dimension(nParam) ::  x
 real(dp), dimension(nMov)   :: energias
 real(dp)                    :: xn, E, suma, average, deviation, uncertainty
-integer                     :: i, j
+integer                     :: i, j, versionCostFunction
 
 x=0.0_dp
 energias=0.0_dp
@@ -520,7 +531,7 @@ do i=1,nMov
                 
     end do
      
-    call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0)
+    call fn(E, uncertainty, x, energy, epsUnoE, epsDosE,0,versionCostFunction)
 	energias(i) = E
         
 end do
@@ -559,7 +570,7 @@ implicit none
 real(dp), intent (IN)   :: beta(:)
 real(dp), intent (IN)   :: tolEqTer
 integer,  intent (IN)   :: nMov_Accepted
-logical,  intent (OUT)  :: flag
+logical,  intent (INOUT)  :: flag
 
 real(dp) :: d0embeta, nn, told
 integer  :: j
